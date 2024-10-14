@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR and Translation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>OCR and Translation</h1>
+        <form id="image-form" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="image" class="form-label">Upload Image</label>
+                <input type="file" class="form-control" id="image" name="image" required>
+            </div>
+            <div class="mb-3">
+                <label for="language" class="form-label">Target Language</label>
+                <input type="text" class="form-control" id="language" name="language" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+
+        <div id="result" class="mt-4"></div>
+        
+        <!-- Collapsible Section for Detected and Translated Text -->
+        <div class="accordion mt-4" id="textAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Detected & Translated Text
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#textAccordion">
+                    <div class="accordion-body" id="text-content">
+                        <!-- Detected and Translated Text will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <table id="entities-table" class="table mt-4" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Entity</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody id="entities-body"></tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.min.js"></script>
+    <script>
+        $('#image-form').on('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            $.ajax({
+                url: '/process',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(data) {
+                    if (data.error) {
+                        $('#result').html(`<div class="alert alert-danger">${data.error}</div>`);
+                    } else {
+                        // Display detected and translated text in the collapsible section
+                        const detectedText = data.result.detected_text ? data.result.detected_text : "No text detected.";
+                        const translatedText = data.result.translated_text ? data.result.translated_text : "No translation available.";
+                        $('#text-content').html(`<strong>Detected Text:</strong> ${detectedText}<br><strong>Translated Text:</strong> ${translatedText}`);
+                        
+                        // Show the table with extracted entities
+                        populateTable(data.result.extracted_entities);
+                    }
+                },
+                error: function(err) {
+                    $('#result').html(`<div class="alert alert-danger">An error occurred. Please try again.</div>`);
+                }
+            });
+        });
+
+        function populateTable(entities) {
+            const tableBody = $('#entities-body');
+            tableBody.empty(); // Clear previous data
+            $('#entities-table').show(); // Show the table
+
+            for (const [key, value] of Object.entries(entities)) {
+                if (value) { // Only show non-null values
+                    tableBody.append(`<tr><td>${key}</td><td>${value}</td></tr>`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
